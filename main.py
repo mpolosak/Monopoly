@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from monopoly_logs import Database
 from monopoly_player import Player
 from pygame_file import Board_screen
