@@ -3,6 +3,7 @@ from monopoly_player import Player
 from monopoly_property import Property
 from pygame.locals import *
 from pygame.locals import Rect
+from shapely.geometry import Point, Polygon
 
 
 blue = (66, 135, 245)
@@ -23,6 +24,7 @@ button_color = (123, 129, 31)
 pons_color = (216, 29, 29)
 title_color = (60, 101, 64)
 
+pawns = [blue, red, yellow, green, black, white]
 
 class Add_player():
     def __init__(self, screen, mode):
@@ -40,16 +42,39 @@ class Add_player():
         pygame.display.flip()
 
     def players_list(self):
-        self.done_button = Rect(50, 600, 300, 100)
-        pygame.draw.rect(self.surf, black, self.done_button)
+        self.surf.fill((255, 255, 255))
+        pygame.display.flip()
+        self.done_button = Rect(50, 800, 500, 50)
+        pygame.draw.rect(self.surf, yellow, self.done_button)
+
+        fontsize = 75
+        font = pygame.font.Font(None, fontsize)
+        text = font.render(self.mode, 1, black)
+        textpos = text.get_rect()
+        textpos = textpos.move(150, 60)
+        self.surf.blit(text, textpos)
+
+
+        font = pygame.font.Font(None, 40)
+        text_surface = font.render("Zapisz", True, black)
+        self.surf.blit(text_surface, (self.done_button.x+200, self.done_button.y+12))
+
+        pygame.draw.rect(self.surf, black, self.done_button, 1)
         self.scr.blit(self.surf, (0, 0))
         pygame.display.flip()
 
         self.all_done = False
         self.down = 0
+        self.act_colors = pawns
+
+        self.players = []
+        self.pawns = []
+
         while self.all_done is False:
+            self.pawns_inx = 0
             self.draw_add()
             self.down += 1
+        return self.players, self.pawns
 
 
 
@@ -60,11 +85,30 @@ class Add_player():
         screen = self.scr
         surf = self.surf
         base_font = pygame.font.Font(None, 32)
+        ok_font = pygame.font.Font(None, 25)
         user_text = ''
+
+        back_color = (255, 255, 255)
         
         # create rectangle
-        input_rect = pygame.Rect(200, 200 + 200 * self.down, 140, 32)
-        ok_rect = pygame.Rect(400, 200 + 200 * self.down, 30, 30)
+
+        before_rect = pygame.Rect(50, 200 + 50 * self.down, 500, 32)
+
+
+
+        input_rect = pygame.Rect(50, 200 + 50 * self.down, 360, 32)
+        ok_rect = pygame.Rect(520, 200 + 50 * self.down, 32, 32)
+        color_rect = pygame.Rect(450, 200 + 50 * self.down, 32, 32)
+
+        done_rect = pygame.Rect(50, 200 + 50 * self.down, 502, 32)
+        color_done = ((450, 231 + 50 * self.down), (480, 200 + 50 * self.down), (550, 200 + 50 * self.down), (550, 231 + 50 * self.down))
+
+
+        right_size = ((485, 200 + 50 * self.down), (485, 228 + 50 * self.down), (505, 214 + 50 * self.down))
+        left_size = ((445, 200 + 50 * self.down), (445, 228 + 50 * self.down), (425, 214 + 50 * self.down))
+        right_arrow = Polygon([(485, 200 + 50 * self.down), (485, 228 + 50 * self.down), (505, 214 + 50 * self.down)])
+        left_arrow = Polygon([(445, 200 + 50 * self.down), (445, 228 + 50 * self.down), (425, 214 + 50 * self.down)])
+        
 
         
         
@@ -78,9 +122,11 @@ class Add_player():
         color = color_passive
         
         active = False
-        
+        ready = False
+        screen.fill((255, 255, 255))
 
-        while not_done and len(user_text) < 10:
+        while not_done:
+            player_color = self.act_colors[self.pawns_inx]
             for event in pygame.event.get():
         
             # if user types QUIT then the screen will close
@@ -88,21 +134,48 @@ class Add_player():
                     pygame.quit()
         
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    print(not_done)
-                    if input_rect.collidepoint(event.pos):
-                        active = True
-                    elif ok_rect.collidepoint(event.pos):
-                        not_done = False
-                        active = False
-                        user = user_text
-                        print(user)
-                        print(not_done)
-                    elif self.done_button.collidepoint(event.pos):
+
+                    if self.done_button.collidepoint(event.pos):
                         not_done = False
                         self.all_done = True
+                        pygame.quit()
+
+                    if ready == False:
+                        if before_rect.collidepoint(event.pos):
+                            ready = True
                     else:
-                        active = False
-        
+                        if input_rect.collidepoint(event.pos):
+                            active = True
+                        elif ok_rect.collidepoint(event.pos):
+                            not_done = False
+                            active = False
+                            user = Player(user_text, 1500)
+                            self.players.append(user)
+                            self.pawns.append(player_color)
+                            colors = []
+                            for i in self.act_colors:
+                                if i != self.act_colors[self.pawns_inx]:
+                                    colors.append(i)
+                            self.act_colors = colors
+                            print(user)
+                            print(not_done)
+
+                        elif left_arrow.contains(Point(event.pos)):
+                            if self.pawns_inx == 0:
+                                self.pawns_inx = len(self.act_colors) - 1
+                            else:
+                                self.pawns_inx -= 1
+                            print("Wyszło")
+                        elif right_arrow.contains(Point(event.pos)):
+                            if self.pawns_inx == len(self.act_colors) - 1:
+                                self.pawns_inx = 0
+                            else:
+                                self.pawns_inx += 1
+                            print("Wyszło2")
+
+                        else:
+                            active = False
+            
                 if event.type == pygame.KEYDOWN and active:
         
                     # Check for backspace
@@ -113,36 +186,57 @@ class Add_player():
         
                     # Unicode standard is used for string
                     # formation
-                    else:
+                    elif len(user_text) < 10:
                         user_text += event.unicode
             
             # it will set background color of screen
-            screen.fill((255, 255, 255))
-        
-            if active:
-                color = color_active
-            else:
-                color = color_passive
+            if self.all_done is not True:
+                screen.fill(back_color)
+                if active:
+                    color = color_active
+                else:
+                    color = color_passive
+
+
+                # draw rectangle and argument passed which should
+                # be on screen
+                if not_done and ready:
+                    pygame.draw.rect(surf, back_color, before_rect)
+                    pygame.draw.rect(surf, color, input_rect)
+                    pygame.draw.rect(surf, black, input_rect, 1)
+                    pygame.draw.rect(surf, color_passive, ok_rect)
+                    pygame.draw.rect(surf, black, ok_rect, 1)
+                    pygame.draw.rect(surf, player_color, color_rect)
+                    pygame.draw.rect(surf, black, color_rect, 1)
+                    pygame.draw.polygon(self.surf, black, right_size)
+                    pygame.draw.polygon(self.surf, black, left_size)
+                    text_surface = base_font.render(user_text, True, black)
+                    surf.blit(text_surface, (input_rect.x+5, input_rect.y+5))
+                    text_surface = ok_font.render("OK", True, black)
+                    surf.blit(text_surface, (ok_rect.x+2, done_rect.y+7))
+                elif ready:
+                    screen.blit(surf, (0, 0))
+                    pygame.draw.rect(surf, color, done_rect)
+                    pygame.draw.polygon(self.surf, player_color, color_done)
+                    pygame.draw.rect(surf, black, done_rect, 1)
+                    text_surface = base_font.render(user_text, True, black)
+                    surf.blit(text_surface, (done_rect.x+30, done_rect.y+5))
+                elif not_done:
+                    screen.blit(surf, (0, 0))
+                    pygame.draw.rect(surf, color, before_rect)
+                    pygame.draw.rect(surf, black, before_rect, 1)
+                    text_surface = base_font.render("+ Add player", True, black)
+                    surf.blit(text_surface, (done_rect.x+180, done_rect.y+5))
+
+                screen.blit(surf, (0, 0))
                 
-            # draw rectangle and argument passed which should
-            # be on screen
-            pygame.draw.rect(surf, color, input_rect)
-            pygame.draw.rect(surf, color, ok_rect)
-            
-        
-            text_surface = base_font.render(user_text, True, black)
-            
-            # render at position stated in arguments
-            surf.blit(text_surface, (input_rect.x+5, input_rect.y+5))
-            screen.blit(surf, (0, 0))
-            
-            # # set width of textfield so that text cannot get
-            # # outside of user's text input
-            # input_rect.w = max(100, text_surface.get_width()+10)
-            
-            # display.flip() will update only a portion of the
-            # screen to updated, not full area
-            pygame.display.flip()
+                # # set width of textfield so that text cannot get
+                # # outside of user's text input
+                # input_rect.w = max(100, text_surface.get_width()+10)
+                
+                # display.flip() will update only a portion of the
+                # screen to updated, not full area
+                pygame.display.flip()
                 
             
 
@@ -150,6 +244,10 @@ class Add_player():
 class Mode_screen():
     def __init__(self, screen):
         self.surf = screen.backgr
+        self._mode_buttons = []
+
+    def buttons(self):
+        return self._mode_buttons
 
     def draw_welcom_title(self):
             fontsize = 75
@@ -197,6 +295,7 @@ class Mode_screen():
         self.draw_please_select()
         for i in range(3):
             mode_rec = Rect(50, 300 + 200 * i, 500, 100)
+            self._mode_buttons.append(mode_rec)
             pygame.draw.rect(surf, blue, mode_rec)
             pygame.draw.rect(surf, black, mode_rec, 2)
         self.draw_mods_names()
@@ -213,36 +312,36 @@ class Setting_screen():
         self.backgr.fill((green))
 
     def draw(self):
-        mods = Mode_screen(self)
+        self.mods = Mode_screen(self)
         self.player_tab = Add_player(self, "multiplayer")
-        mods.draw_mods()
+        self.mods.draw_mods()
         self.screen.blit(self.backgr, (0, 0))
         pygame.display.flip()
+        self.do_action()
 
 
     def do_action(self, problem=False):
-        buttons = 1
         paused = True
         while paused:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
-                # if event.type == pygame.MOUSEBUTTONUP:
-                #     paused = False
-                    
+                if event.type == pygame.MOUSEBUTTONUP:
+                    for button in self.mods.buttons():
+                        if button.collidepoint(event.pos):
+                            paused = False
 
-                    # for button in self.action_table.buttons():
-                        # button.activate(player, self)
-                    # self.act_buttons = []
+# test2 = True
 
-test2 = True
-test = Setting_screen()
-test.draw()
-test.backgr.fill((color))
-test.screen.blit(test.backgr, (0, 0))
-pygame.display.flip()
-test.player_tab.players_list()
-# test.player_tab.draw_new()
-# test.player_tab.draw_new()
-print("zupa")
-test.do_action()
+# test = Setting_screen()
+# test3 = Mode_screen(test)
+# test3.draw_mods()
+# test.draw()
+# test.backgr.fill((color))
+# test.screen.blit(test.backgr, (0, 0))
+# pygame.display.flip()
+# test.player_tab.players_list()
+# # test.player_tab.draw_new()
+# # test.player_tab.draw_new()
+# print("zupa")
+# test.do_action()

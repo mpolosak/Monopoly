@@ -23,6 +23,7 @@ deck_cen = (111, 155, 115)
 button_color = (123, 129, 31)
 pons_color = (216, 29, 29)
 title_color = (60, 101, 64)
+to_fly_color = (180, 174, 122)
 
 
 class Player_name_title:
@@ -183,6 +184,19 @@ class Button(Action):
         textpos = textpos.move(x + (self.xsize // 4), y + (self.ysize // 4))
         surf.blit(text, textpos)
 
+    def to_activate(self, player, game):
+        x = self.xval
+        y = self.yval
+        xsize = self.xsize
+        ysize = self.ysize
+        cur = pygame.mouse.get_pos()
+        if x + xsize > cur[0] > x and y + ysize > cur[1] > y:
+            return True
+        else:
+            return False
+
+
+
     def activate(self, player, game):
         property = self.property
         x = self.xval
@@ -236,6 +250,9 @@ class Button(Action):
                     property.sell_house()
                 except:
                     pass
+            if name == "Wykonaj" and self.property.name() == "Lotnisko":
+                player.ready_to_fly = True
+            
 
 
 class Board:
@@ -251,6 +268,7 @@ class Board:
         self.font_size = font_size
         self.corner_size = (self.size - self.center_size) // 2
         self.pawns = []
+        self.airport_places = []
 
     def add_pawn(self, pawn):
         self.pawns.append(pawn)
@@ -338,7 +356,13 @@ class Board:
                 if database[10 - i].type() != "property":
                     pygame.draw.rect(background, special, rec)
                 else:
-                    pygame.draw.rect(background, prop_color, rec)
+                    if database[10 - i].owner() and database[10 - i].owner().ready_to_fly:
+                        sqr = rec
+                        self.airport_places.append([10 - i, sqr])
+                        pygame.draw.rect(background, to_fly_color,
+                                         rec)
+                    else:
+                        pygame.draw.rect(background, prop_color, rec)
 
             if database[i + 20].isactive():
                 if database[i + 20].type() != "property":
@@ -349,7 +373,13 @@ class Board:
                 if database[i + 20].type() != "property":
                     pygame.draw.rect(background, special, rec2)
                 else:
-                    pygame.draw.rect(background, prop_color, rec2)
+                    if database[i + 20].owner() and database[i + 20].owner().ready_to_fly:
+                        sqr = rec2
+                        self.airport_places.append([i + 20, sqr])
+                        pygame.draw.rect(background, to_fly_color,
+                                         rec2)
+                    else:
+                        pygame.draw.rect(background, prop_color, rec2)
 
             pygame.draw.rect(background, black, rec, 2)
             pygame.draw.rect(background, black, rec2, 2)
@@ -365,13 +395,22 @@ class Board:
                 else:
                     pygame.draw.rect(background, lighted_prop,
                                      Rect(560, move_up + 36 + move_blk, 104, 68))
+                    
             else:
                 if database[20 - i].type() != "property":
                     pygame.draw.rect(background, special,
                                      Rect(560, move_up + 36 + move_blk, 104, 68))
                 else:
-                    pygame.draw.rect(background, prop_color,
-                                     Rect(560, move_up + 36 + move_blk, 104, 68))
+                    if database[20 - i].owner() and database[20 - i].owner().ready_to_fly:
+                        sqr = Rect(560, move_up + 36 + move_blk, 104, 68)
+                        self.airport_places.append([20 - i, sqr])
+                        pygame.draw.rect(background, to_fly_color,
+                                         Rect(560, move_up + 36 + move_blk, 104, 68))
+                    else:
+                        pygame.draw.rect(background, prop_color,
+                                         Rect(560, move_up + 36 + move_blk, 104, 68))
+                    
+                    
             if database[i + 30].isactive():   
                 if database[i + 30].type() != "property":
                     pygame.draw.rect(background, lighted_spec,
@@ -384,8 +423,14 @@ class Board:
                     pygame.draw.rect(background, special,
                                      Rect(move, move_up + 36 + move_blk, 104, 68))
                 else:
-                    pygame.draw.rect(background, prop_color,
-                                     Rect(move, move_up + 36 + move_blk, 104, 68))        
+                    if database[i + 30].owner() and database[i + 30].owner().ready_to_fly:
+                        sqr = Rect(move, move_up + 36 + move_blk, 104, 68)
+                        self.airport_places.append([i + 30, sqr])
+                        pygame.draw.rect(background, to_fly_color,
+                                         Rect(move, move_up + 36 + move_blk, 104, 68))
+                    else:
+                        pygame.draw.rect(background, prop_color,
+                                        Rect(move, move_up + 36 + move_blk, 104, 68))        
 
             pygame.draw.rect(background, black,
                                 Rect(560, move_up + 36 + move_blk, 104, 68), 2)
@@ -622,7 +667,7 @@ class Positions:
 
 
 class Board_screen():
-    def __init__(self, players, database):
+    def __init__(self, players, pawns_colors, database):
         self.players = players
         self.database = database
         pygame.init()
@@ -634,8 +679,9 @@ class Board_screen():
         back = self.background
         self.title = Player_name_title(back, title_color, 20, 70)
         self.board = Board(back, prop_color, deck_cen, 800, 596, 560, 80, 70)
+        pygame.display.flip()
+
         self.act_buttons = []
-        pawns_colors = [red, blue, yellow, green]
         for number, player in enumerate(self.players):
             pawn_color = pawns_colors[number]
             pawn = player_pawn(self.board, pawn_color, player)
@@ -659,14 +705,15 @@ class Board_screen():
         self.board.draw_corner(3, white)
         self.board.draw_corner(4, white)
         self.board.draw_cards(self.database)
-        position = Positions(self.background, self.database, 20)
-        position.draw()
+        self.position = Positions(self.background, self.database, 20)
+        self.position.draw()
         srf = self.background
         score_tb = Score(self.players, srf, score, 400, 800, 1420, 80, 100, 50)
         self.score_table = score_tb
         self.score_table.draw()
         self.score_table.draw_text()
         self.board.draw_pawns()
+        self.screen.blit(self.background, (0, 0))
         pygame.display.flip()
 
     def draw_buttons(self, player, problem):
@@ -719,13 +766,33 @@ class Board_screen():
         self.draw_buttons(player, problem)
         buttons = self.act_buttons
         paused = True
-        while paused and len(buttons) != 0:
+        while (paused and len(buttons) != 0) or (paused and player.ready_to_fly):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                 if event.type == pygame.MOUSEBUTTONUP:
-                    paused = False
-                    for button in self.action_table.buttons():
-                        button.activate(player, self)
-                    self.act_buttons = []
+                    if player.ready_to_fly and len(player.properties()) != 0:
+                        for pos, fly in self.board.airport_places:
+                            if fly.collidepoint(event.pos):
+                                player.go_to(pos)
+                                self.board.airport_places = []
+                                paused = False
+                                player.ready_to_fly = False
+                    elif player.ready_to_fly and len(player.properties()) == 0:
+                        paused = False
+                        player.ready_to_fly = False
+                    else:
+                        for button in self.action_table.buttons():
+                            if button.to_activate(player, self):
+                                button.activate(player, self)
+                                if player.ready_to_fly and len(buttons) != 0 :
+                                    self.act_buttons = []
+                                    buttons = []
+                                    self.clear()
+                                    self.screen.blit(self.background, (0, 0))
+                                    self.draw()
+                                elif player.ready_to_fly is False:
+                                    paused = False
+                                    self.act_buttons = []
+                        
         pygame.display.flip()
