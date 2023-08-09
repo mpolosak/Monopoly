@@ -5,8 +5,8 @@ from pygame_file import Board_screen
 from monopoly_exeptions import NotEnoughtMoneyError
 from pygame_settingsscreen import Add_player, Mode_screen, Setting_screen
 
-prop = "monopoly/database.json"
-spc = "monopoly/Special_cards_database.json"
+prop = "database.json"
+spc = "Special_cards_database.json"
 database = Database(prop, spc)
 squares = database.sort_database()
 
